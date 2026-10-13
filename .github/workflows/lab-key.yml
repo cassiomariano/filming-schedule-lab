@@ -1,0 +1,22 @@
+# One-off helper: shows the lab robot's PUBLIC key (safe to show), so a copy of your data can be sealed for the lab only.
+name: Lab robot public key
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/lab-key.yml"]
+  workflow_dispatch:
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Public key from the lab's Firebase key
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          node -e '
+            const raw = String(process.env.FIREBASE_SERVICE_ACCOUNT || "");
+            if (!raw.trim()) { console.log("::error title=Lab key::The FIREBASE_SERVICE_ACCOUNT secret is missing"); process.exit(1); }
+            const sa = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
+            const pem = require("crypto").createPublicKey(sa.private_key).export({ type: "spki", format: "pem" });
+            console.log("::notice title=Lab project::" + sa.project_id);
+            console.log("::notice title=Lab public key::" + pem.replace(/\n/g, "|"));'
